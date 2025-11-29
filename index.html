@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>SONALIA: ACTIVE NEURAL CIRCUIT</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* --- エラー表示 --- */
+        #error-console {
+            position: fixed; top: 0; left: 0; width: 100%; background: rgba(50,0,0,0.9); 
+            color: #ffaaaa; font-family: monospace; font-size: 12px; padding: 10px; 
+            z-index: 99999; display: none; white-space: pre-wrap;
+        }
+
+        /* --- ローダー --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; z-index: 9999; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s;
+        }
+        .logo { font-size: 40px; font-weight: bold; color: #fff; letter-spacing: 5px; text-shadow: 0 0 20px #00ffff; margin-bottom: 20px; }
+        .loading-text { color: #00ffff; font-family: monospace; font-size: 14px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* --- UI --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        #hud-title {
+            position: absolute; top: 30px; left: 30px; pointer-events: auto;
+            border-left: 4px solid #00ffff; padding-left: 15px;
+            background: linear-gradient(90deg, rgba(0,20,30,0.8), transparent);
+        }
+        h1 { margin: 0; font-size: 28px; color: #fff; text-shadow: 0 0 10px #00ffff; letter-spacing: 2px; }
+        p { margin: 5px 0 0; color: #00ffff; font-size: 12px; font-family: monospace; }
+
+        #hud-footer {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            color: #88aaff; font-size: 14px; letter-spacing: 3px; font-family: monospace;
+            text-shadow: 0 0 10px rgba(0,100,255,0.5);
+        }
+
+        /* --- パネル --- */
+        #panel {
+            position: absolute; top: 0; right: 0; width: 350px; height: 100%;
+            background: rgba(10, 15, 20, 0.95); border-left: 1px solid #333;
+            transform: translateX(100%); transition: transform 0.3s;
+            color: #eee; display: flex; flex-direction: column; z-index: 20; pointer-events: auto;
+            box-shadow: -20px 0 50px rgba(0,0,0,0.8);
+        }
+        #panel.active { transform: translateX(0); }
+        .p-head { padding: 30px; border-bottom: 1px solid #333; background: linear-gradient(180deg, rgba(0,255,255,0.1), transparent); }
+        .p-tag { font-size: 10px; padding: 2px 8px; border-radius: 2px; background: #00ffff; color: #000; font-weight: bold; }
+        .p-title { font-size: 24px; margin: 15px 0 0; color: #fff; }
+        .p-body { padding: 30px; overflow-y: auto; flex: 1; }
+        .row { margin-bottom: 20px; }
+        .label { font-size: 10px; color: #00ffff; display: block; margin-bottom: 5px; border-bottom: 1px solid #333; }
+        .text { font-size: 13px; line-height: 1.6; color: #ccc; }
+        .close { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #fff; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r120/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.120.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="error-console"></div>
+
+    <div id="loader" onclick="startApp()">
+        <div class="logo">SONALIA</div>
+        <div class="loading-text">CONNECTING CIRCUITS...</div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="hud-title">
+            <h1>思考回路マップ</h1>
+            <p>Processing Flow: Input » OS » DB » Factor » Action</p>
+        </div>
+        <div id="hud-footer">
+            現在（入力・意味付け） ▶▶▶ 未来（選択・行動）
+        </div>
+    </div>
+
+    <div id="panel">
+        <div class="close" onclick="closePanel()">×</div>
+        <div class="p-head">
+            <span class="p-tag" id="p-tag">TAG</span>
+            <h2 class="p-title" id="p-title">Title</h2>
+        </div>
+        <div class="p-body">
+            <div class="row"><span class="label">DEFINITION</span><div class="text" id="p-desc">...</div></div>
+            <div class="row"><span class="label">SYSTEM ROLE</span><div class="text" id="p-role">...</div></div>
+            <div class="row"><span class="label">INTERNAL VOICE</span><div class="text" id="p-thought" style="color:#fff; font-family:monospace;">...</div></div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        window.onerror = function(msg, url, line) {
+            const el = document.getElementById('error-console');
+            if(el) {
+                el.style.display = 'block';
+                el.innerHTML = "Error: " + msg + " (Line: " + line + ")";
+            }
+            return false;
+        };
+
+        // --- DATA ---
+        // カテゴリごとにグループ化して管理
+        const DATA = {
+            INPUT: [
+                { id:"SENSE", type:"INPUT", name:"五感入力", color:0xFFFFFF, z:-140, desc:"視覚・聴覚などの外界情報。", role:"情報収集", thought:"(Sensing...)" }
+            ],
+            OS: [
+                { id:"OS1", type:"OS(1層)", name:"生存/生活", color:0x00FFFF, z:-20, desc:"安全・ルーティン。", role:"生存本能", thought:"「危なくないか？」" },
+                { id:"OS2", type:"OS(2層)", name:"評価/所属", color:0x3388FF, z:-40, desc:"善悪・集団帰属。", role:"社会性", thought:"「正しいか？」" },
+                { id:"OS3", type:"OS(3層)", name:"報酬/意味", color:0xAA00FF, z:-60, desc:"損得・意義の判断。", role:"価値判断", thought:"「得か？」" },
+                { id:"OS4", type:"OS(4層)", name:"時間/協調", color:0xFFD700, z:-80, desc:"過去未来・自他バランス。", role:"大局観", thought:"「将来は？」" }
+            ],
+            DB: [
+                { id:"DB_DESIRE", type:"DB", name:"欲求DB", color:0xFF5500, z:10, x:-20, y:20, desc:"根源的渇望。", role:"Motivation", thought:"(Deep Desire)" },
+                { id:"DB_EMOTION", type:"DB", name:"情動DB", color:0x0044FF, z:10, x:20, y:20, desc:"感情記憶。", role:"Emotion", thought:"(Flashback)" },
+                { id:"DB_VALUE", type:"DB", name:"価値観DB", color:0xFFCC00, z:10, x:20, y:-20, desc:"信念・ルール。", role:"Belief", thought:"(Core Rule)" },
+                { id:"DB_IMPLICIT", type:"DB", name:"無意識DB", color:0x888888, z:10, x:-20, y:-20, desc:"反射的クセ。", role:"Reflex", thought:"(Auto-Pilot)" }
+            ],
+            FACTOR: [
+                { id:"IQ", type:"係数", name:"IQ", color:0x00CCFF, z:50, angle:0, desc:"論理力。", role:"Logic", thought:"分析" },
+                { id:"EQ", type:"係数", name:"EQ", color:0xFF6666, z:50, angle:1, desc:"感情力。", role:"Empathy", thought:"共感" },
+                { id:"SQ", type:"係数", name:"SQ", color:0xFFCC00, z:50, angle:2, desc:"社会性。", role:"Social", thought:"適応" },
+                { id:"AQ", type:"係数", name:"AQ", color:0x888888, z:50, angle:3, desc:"逆境力。", role:"Resilience", thought:"忍耐" },
+                { id:"CQ", type:"係数", name:"CQ", color:0xAA00FF, z:50, angle:4, desc:"創造力。", role:"Idea", thought:"発想" },
+                { id:"HQ", type:"係数", name:"HQ", color:0xFFFFFF, z:50, angle:5, desc:"人間力。", role:"Ethics", thought:"誠実" },
+                { id:"MQ", type:"係数", name:"MQ", color:0xFF3300, z:50, angle:6, desc:"行動力。", role:"Action", thought:"実行" },
+                { id:"KQ", type:"係数", name:"KQ", color:0x00FF88, z:50, angle:7, desc:"知識力。", role:"Know-How", thought:"応用" }
+            ],
+            OUTPUT: [
+                { id:"OUT", type:"OUTPUT", name:"行動出力", color:0xFFFFFF, z:120, desc:"最終的な言動・表情。", role:"Expression", thought:"(Act)" }
+            ]
+        };
+
+        // 配列に直す（描画用）
+        const ALL_NODES = [
+            ...DATA.INPUT, ...DATA.OS, ...DATA.DB, ...DATA.FACTOR, ...DATA.OUTPUT
+        ];
+
+        let scene, camera, renderer, controls;
+        let humanGroup, glowTex;
+        const interactables = [];
+        const clock = new THREE.Clock();
+        
+        // 3Dオブジェクトの参照を保持するマップ (発火エフェクト用)
+        const nodeMeshes = {}; 
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.001);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 3000);
+            camera.position.set(250, 100, 0); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.3;
+
+            humanGroup = new THREE.Group();
+            scene.add(humanGroup);
+
+            glowTex = createGlowTex();
+
+            buildHumanSilhouette();
+            buildSystem();
+            buildCircuitParticles(); // 新しい回路パーティクル
+
+            animate();
+            setTimeout(startApp, 1500);
+        }
+
+        function createGlowTex() {
+            const c = document.createElement('canvas'); c.width=64; c.height=64;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(32,32,0, 32,32,32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(0.2, 'rgba(255,255,255,0.2)');
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle=g; ctx.fillRect(0,0,64,64);
+            return new THREE.CanvasTexture(c);
+        }
+
+        function buildHumanSilhouette() {
+            const pGeo = new THREE.Geometry();
+            for(let i=0; i<1500; i++) {
+                const z = (Math.random() * 320) - 160; 
+                let radius = 0;
+                if (z < -130) radius = 25; // Head
+                else if (z < -110) radius = 15; // Neck
+                else if (z < -30) radius = 55; // Chest
+                else if (z < 40) radius = 45; // Waist
+                else radius = 50; // Legs
+
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.random() * radius;
+                pGeo.vertices.push(new THREE.Vector3(Math.cos(angle)*r, Math.sin(angle)*r, z));
+            }
+            const pMat = new THREE.PointsMaterial({ color: 0x004466, size: 2, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
+            humanGroup.add(new THREE.Points(pGeo, pMat));
+        }
+
+        function buildSystem() {
+            ALL_NODES.forEach(d => {
+                let mesh;
+                
+                if (d.type.includes("OS")) {
+                    const geo = new THREE.TorusGeometry(35, 0.5, 16, 64);
+                    const mat = new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: 0.6 });
+                    mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.z = d.z;
+                    const plane = new THREE.Mesh(new THREE.CircleGeometry(30, 32), new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: 0.05, side: THREE.DoubleSide }));
+                    mesh.add(plane);
+                } else if (d.type === "DB") {
+                    mesh = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), new THREE.MeshBasicMaterial({ color: d.color, wireframe: true }));
+                    mesh.position.set(d.x || 0, d.y || 0, d.z);
+                } else if (d.type === "係数") {
+                    const r = 55;
+                    const angle = (d.angle / 8) * Math.PI * 2;
+                    mesh = new THREE.Mesh(new THREE.BoxGeometry(8,8,8), new THREE.MeshBasicMaterial({ color: d.color, wireframe: true }));
+                    mesh.position.set(Math.cos(angle)*r, Math.sin(angle)*r, d.z);
+                } else if (d.type === "INPUT") {
+                    mesh = new THREE.Mesh(new THREE.SphereGeometry(4), new THREE.MeshBasicMaterial({color:0xffffff}));
+                    mesh.position.z = d.z;
+                } else if (d.type === "OUTPUT") {
+                    mesh = new THREE.Mesh(new THREE.SphereGeometry(4), new THREE.MeshBasicMaterial({color:0xffffff}));
+                    mesh.position.z = d.z;
+                }
+
+                if(mesh) {
+                    mesh.userData = { data: d, color: d.color, originalScale: mesh.scale.clone() };
+                    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: d.color, blending: THREE.AdditiveBlending }));
+                    spr.scale.set(40,40,1);
+                    mesh.add(spr);
+                    humanGroup.add(mesh);
+                    interactables.push(mesh);
+                    
+                    // カテゴリごとに配列に保存（経路計算用）
+                    if(!nodeMeshes[d.type]) nodeMeshes[d.type] = [];
+                    nodeMeshes[d.type].push(mesh);
+                    
+                    // 特殊なグループ名で保存
+                    if(d.type.includes("OS")) {
+                        if(!nodeMeshes["OS_ALL"]) nodeMeshes["OS_ALL"] = [];
+                        nodeMeshes["OS_ALL"].push(mesh);
+                    }
+                }
+            });
+
+            // Spine
+            const lineGeo = new THREE.Geometry();
+            lineGeo.vertices.push(new THREE.Vector3(0, 0, -150));
+            lineGeo.vertices.push(new THREE.Vector3(0, 0, 150));
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 });
+            humanGroup.add(new THREE.Line(lineGeo, lineMat));
+        }
+
+        // --- INTELLIGENT CIRCUIT FLOW ---
+        const particles = [];
+        
+        function buildCircuitParticles() {
+            // パーティクルプール作成
+            const pGeo = new THREE.Geometry();
+            for(let i=0; i<30; i++) {
+                pGeo.vertices.push(new THREE.Vector3(0,0,0));
+                // 各パーティクルに「現在の目的地」を持たせる
+                particles.push({
+                    index: i,
+                    stage: 0, // 0:Start->Input, 1:Input->OS, 2:OS->DB, 3:DB->Factor, 4:Factor->Out
+                    pos: new THREE.Vector3(0,0,-200), // Start pos
+                    target: null,
+                    speed: 0.05 + Math.random()*0.02
+                });
+            }
+            const pMat = new THREE.PointsMaterial({ color:
