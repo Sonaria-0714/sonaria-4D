@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SONALIA: 4D REALIZATION</title>
+    <title>SONALIA: 4D REALIZATION (FINAL)</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; }
@@ -120,10 +120,10 @@
             { id:"OS2", type:"OS", name:"評価/所属", color:0x3388FF, x:-70, y:0, z:0, size:6, desc:"社会的判断。", role:"Social", thought:"「正しい？」" },
             { id:"OS1", type:"OS", name:"生存/生活", color:0x00FFFF, x:-50, y:0, z:0, size:6, desc:"生存本能。", role:"Survival", thought:"「安全？」" },
 
-            { id:"DB1", type:"DB", name:"欲求DB", color:0xFF5500, x:10, y:30, z:30, size:10, desc:"根源的渇望。", role:"Motivation", thought:"(Desire)" },
-            { id:"DB2", type:"DB", name:"情動DB", color:0x0044FF, x:10, y:30, z:-30, size:10, desc:"感情記憶。", role:"Emotion", thought:"(Feeling)" },
-            { id:"DB3", type:"DB", name:"価値観DB", color:0xFFCC00, x:10, y:-30, z:30, size:10, desc:"信念体系。", role:"Belief", thought:"(Rule)" },
-            { id:"DB4", type:"DB", name:"無意識DB", color:0x888888, x:10, y:-30, z:-30, size:10, desc:"自動反応。", role:"Reflex", thought:"(Habit)" },
+            { id:"DB1", type:"DB", name:"欲求DB", color:0xFF5500, x:10, y:25, z:25, size:10, desc:"根源的渇望。", role:"Motivation", thought:"(Desire)" },
+            { id:"DB2", type:"DB", name:"情動DB", color:0x0044FF, x:10, y:25, z:-25, size:10, desc:"感情記憶。", role:"Emotion", thought:"(Feeling)" },
+            { id:"DB3", type:"DB", name:"価値観DB", color:0xFFCC00, x:10, y:-25, z:25, size:10, desc:"信念体系。", role:"Belief", thought:"(Rule)" },
+            { id:"DB4", type:"DB", name:"無意識DB", color:0x888888, x:10, y:-25, z:-25, size:10, desc:"自動反応。", role:"Reflex", thought:"(Habit)" },
 
             { id:"IQ", type:"係数", name:"IQ", color:0x00CCFF, x:70, angle:0, size:7, desc:"論理力。", role:"Logic", thought:"分析" },
             { id:"EQ", type:"係数", name:"EQ", color:0xFF6666, x:70, angle:1, size:7, desc:"感情力。", role:"Empathy", thought:"共感" },
@@ -153,7 +153,9 @@
             scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
             camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 3000);
-            camera.position.set(0, 100, 400); // 斜め上から
+            // 【修正】カメラを遠くし、全体が見えるように調整
+            camera.position.set(0, 150, 550); 
+            camera.lookAt(0, 0, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -220,17 +222,18 @@
                 const col = new THREE.Color(d.color);
 
                 if(d.type === 'OS') {
-                    const geo = new THREE.TorusGeometry(40, 0.5, 16, 64);
+                    // 【修正】リングの半径を少し小さくして画面内に収める
+                    const geo = new THREE.TorusGeometry(30, 0.5, 16, 64);
                     mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6 }));
                     mesh.rotation.y = Math.PI/2; 
                     mesh.position.x = d.x;
                     
-                    const hit = new THREE.Mesh(new THREE.CylinderGeometry(40,40,5,16), new THREE.MeshBasicMaterial({visible:false}));
+                    const hit = new THREE.Mesh(new THREE.CylinderGeometry(30,30,5,16), new THREE.MeshBasicMaterial({visible:false}));
                     hit.rotation.z = Math.PI/2; hit.position.x = d.x; hit.userData = { data: d };
                     interactables.push(hit); mainGroup.add(hit);
 
                 } else if(d.type === '係数') {
-                    const r = 60;
+                    const r = 50; // 【修正】係数の軌道も少し小さく
                     const ang = (d.angle/8)*Math.PI*2;
                     const y = Math.cos(ang)*r;
                     const z = Math.sin(ang)*r;
@@ -284,7 +287,7 @@
             
             // Pulse
             const s = 1 + Math.sin(time)*0.01;
-            mainGroup.scale.set(s, s, s);
+            mainGroup.scale.set(s, s, 1);
 
             // Flow
             const pGeo = mainGroup.children[mainGroup.children.length-1].geometry;
@@ -325,17 +328,17 @@
             const hits = raycaster.intersectObjects(interactables);
             
             if(hits.length > 0) {
-                showPanel(hits[0].object.userData.data);
+                showPanel(hits[0].object.userData.data, hits[0].object.userData.color);
             } else {
                 closePanel();
             }
         });
 
-        function showPanel(d) {
+        function showPanel(d, col) {
             document.getElementById('p-tag').innerText = d.type;
-            document.getElementById('p-tag').style.background = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-tag').style.background = '#'+new THREE.Color(col).getHexString();
             document.getElementById('p-title').innerText = d.name;
-            document.getElementById('p-title').style.color = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-title').style.color = '#'+new THREE.Color(col).getHexString();
             document.getElementById('p-desc').innerText = d.desc;
             document.getElementById('p-role').innerText = d.role;
             document.getElementById('p-thought').innerText = d.thought;
