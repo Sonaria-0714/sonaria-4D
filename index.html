@@ -3,12 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SONALIA: SENSE INTEGRATION</title>
+    <title>SONALIA: INTEGRATED MASTER CORE</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; }
 
-        /* UI LAYER */
+        /* --- ERROR BOX (復活) --- */
+        #error-box {
+            position: fixed; top: 0; left: 0; width: 100%; 
+            background: rgba(200, 0, 0, 0.9); color: #fff; 
+            font-family: monospace; font-size: 12px; padding: 10px; 
+            z-index: 99999; display: none; white-space: pre-wrap; border-bottom: 2px solid #fff;
+        }
+
+        /* --- UI LAYER --- */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         
         #hud-title {
@@ -19,19 +27,19 @@
         h1 { margin: 0; font-size: 32px; color: #fff; text-shadow: 0 0 20px #00ffff; letter-spacing: 4px; }
         p { margin: 5px 0 0; color: #00ffff; font-size: 14px; letter-spacing: 2px; }
 
-        /* PHASE INDICATOR (復活) */
+        /* PHASE INDICATOR */
         #phase-indicator {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 80%; max-width: 900px; text-align: center;
+            width: 90%; max-width: 1000px; text-align: center;
         }
         .phase-bar {
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0, 15, 30, 0.9); padding: 15px 30px; border-radius: 50px;
+            background: rgba(0, 15, 30, 0.9); padding: 15px 20px; border-radius: 50px;
             border: 1px solid rgba(0, 255, 255, 0.3); box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
         .phase-item {
-            color: #444; font-size: 12px; font-weight: bold; letter-spacing: 2px; transition: 0.3s;
-            position: relative; padding: 5px 10px;
+            color: #444; font-size: 11px; font-weight: bold; letter-spacing: 1px; transition: 0.3s;
+            position: relative; padding: 5px;
         }
         .phase-item.active { color: #fff; text-shadow: 0 0 10px #00ffff; transform: scale(1.1); }
         .phase-item.active::after {
@@ -63,7 +71,7 @@
         }
         .cf-labels { display: flex; justify-content: space-between; font-size: 11px; color: #88aaff; font-weight: bold; }
 
-        /* INFO PANEL */
+        /* PANEL */
         #panel {
             position: absolute; top: 0; right: 0; width: 380px; height: 100%;
             background: rgba(8, 12, 16, 0.96); border-left: 1px solid #333;
@@ -91,11 +99,20 @@
         }
         .load-text { font-size: 40px; color: #fff; font-weight: bold; letter-spacing: 6px; text-shadow: 0 0 30px #00ffff; }
         .load-sub { color: #00ffff; font-family: monospace; margin-top: 15px; animation: blink 1s infinite; }
+        .tap-hint { margin-top: 30px; border: 1px solid #00ffff; color: #00ffff; padding: 10px 20px; border-radius: 30px; font-size: 12px; }
         @keyframes blink { 50% { opacity: 0.5; } }
-        
-        /* Error handling */
-        #error-box { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(50,0,0,0.9); border:1px solid red; padding:20px; color:#fff; display:none; z-index:10000; }
     </style>
+
+    <script>
+        window.onerror = function(msg, url, line) {
+            const el = document.getElementById('error-box');
+            if(el) {
+                el.style.display = 'block';
+                el.innerHTML += "ERROR: " + msg + " (Line: " + line + ")<br>";
+            }
+            return false; // デフォルトの処理も走らせる
+        };
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r120/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
@@ -105,15 +122,16 @@
 
     <div id="error-box"></div>
 
-    <div id="loader" onclick="startApp()">
+    <div id="loader" onclick="forceStart()">
         <div class="load-text">SONALIA</div>
-        <div class="load-sub">CONNECTING 5 SENSES...</div>
+        <div class="load-sub">CONNECTING SENSES...</div>
+        <div class="tap-hint">CLICK TO FORCE START</div>
     </div>
 
     <div id="ui-layer">
         <div id="hud-title">
             <h1>思考回路マップ</h1>
-            <p>SENSE INTEGRATION SYSTEM</p>
+            <p>INTEGRATED NEURAL SYSTEM</p>
         </div>
 
         <div id="cf-container">
@@ -126,17 +144,17 @@
 
         <div id="phase-indicator">
             <div class="phase-bar">
-                <div class="phase-item" id="ph-sense">五感受信</div>
-                <div class="phase-arrow" id="ar-0">▶▶</div>
-                <div class="phase-item" id="ph-in">入力統合</div>
-                <div class="phase-arrow" id="ar-1">▶▶</div>
-                <div class="phase-item" id="ph-os">OS意味付</div>
-                <div class="phase-arrow" id="ar-2">▶▶</div>
-                <div class="phase-item" id="ph-db">DB参照</div>
-                <div class="phase-arrow" id="ar-3">▶▶</div>
-                <div class="phase-item" id="ph-fc">係数処理</div>
-                <div class="phase-arrow" id="ar-4">▶▶</div>
-                <div class="phase-item" id="ph-out">行動出力</div>
+                <div class="phase-item" id="ph-sense">五感</div>
+                <div class="phase-arrow" id="ar-0">▶</div>
+                <div class="phase-item" id="ph-in">入力</div>
+                <div class="phase-arrow" id="ar-1">▶</div>
+                <div class="phase-item" id="ph-os">OS</div>
+                <div class="phase-arrow" id="ar-2">▶</div>
+                <div class="phase-item" id="ph-db">DB</div>
+                <div class="phase-arrow" id="ar-3">▶</div>
+                <div class="phase-item" id="ph-fc">係数</div>
+                <div class="phase-arrow" id="ar-4">▶</div>
+                <div class="phase-item" id="ph-out">出力</div>
             </div>
         </div>
     </div>
@@ -157,11 +175,11 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        window.onerror = function(msg, url, line) {
-            const el = document.getElementById('error-box');
-            el.style.display = 'block';
-            el.innerHTML = "Error: " + msg + "<br>Line: " + line;
-            return false;
+        // 強制スタート機能
+        window.forceStart = function() {
+            const l = document.getElementById('loader');
+            l.style.opacity = 0;
+            setTimeout(() => { l.style.display = 'none'; }, 800);
         };
 
         // --- DATA ---
@@ -173,7 +191,7 @@
             { id:"MOUTH", type:"五感", name:"味覚 (Taste)", color:0xAAFFFF, x:-220, y:-30, z:-180, size:6, desc:"化学情報の受信。", role:"Sensor", thought:"(Tasting)" },
             { id:"SKIN", type:"五感", name:"触覚 (Touch)", color:0xAAFFFF, x:-220, y:-60, z:-180, size:6, desc:"物理刺激の受信。", role:"Sensor", thought:"(Feeling)" },
 
-            // 1. INPUT HUB (Head)
+            // 1. INPUT (Head)
             { id:"IN", type:"INPUT", name:"入力統合", color:0xFFFFFF, x:0, y:0, z:-180, size:10, desc:"五感情報の統合処理。", role:"Input Hub", thought:"(Integrating...)" },
             
             // 2. OS (Chest)
@@ -210,25 +228,27 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         
-        // Particles
         const meteors = [];
         const senseParticles = [];
         let memoryParticles = [];
         let memoryGeo, memoryMat;
         const cfFilterMesh = [];
 
-        // Node Cache
         const nodeCache = {
             SENSE: [], INPUT: [], OS: [], DB: [], FACTOR: [], OUTPUT: []
         };
 
         function init() {
+            // 必須ライブラリチェック
+            if (typeof THREE === 'undefined') {
+                throw new Error("Three.js failed to load.");
+            }
+
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.0008); // 少し奥まで見えるように
+            scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
             camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 3000);
-            // カメラを近づけて迫力を出す
-            camera.position.set(200, 80, 0); 
+            camera.position.set(250, 80, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -236,11 +256,11 @@
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.autoRotate = true; 
+            controls.autoRotate = true;
             controls.autoRotateSpeed = 0.2;
 
             mainGroup = new THREE.Group();
-            mainGroup.rotation.z = -Math.PI / 2; 
+            mainGroup.rotation.z = -Math.PI / 2;
             scene.add(mainGroup);
 
             glowTex = createGlowTex();
@@ -248,11 +268,13 @@
             buildPipelineStructure();
             buildFilterGate();
             buildMemoryPool();
-            buildSenseFlow(); // 5感からの流星群
+            buildSenseFlow();
 
             animate();
             setupSlider();
-            setTimeout(startApp, 1500);
+            
+            // 自動スタート予約
+            setTimeout(forceStart, 2000);
         }
 
         function createGlowTex() {
@@ -267,10 +289,9 @@
         }
 
         function buildPipelineStructure() {
-            // Spine
             const points = [new THREE.Vector3(0,0,-220), new THREE.Vector3(0,0,220)];
             const spineGeo = new THREE.BufferGeometry().setFromPoints(points);
-            const spineLine = new THREE.Line(spineGeo, new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3, linewidth: 2 }));
+            const spineLine = new THREE.Line(spineGeo, new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 }));
             mainGroup.add(spineLine);
 
             NODES.forEach(d => {
@@ -278,7 +299,7 @@
                 const col = new THREE.Color(d.color);
 
                 if(d.type === 'OS') {
-                    const geo = new THREE.TorusGeometry(45, 0.5, 16, 64); // 大きく
+                    const geo = new THREE.TorusGeometry(45, 0.5, 16, 64);
                     mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6 }));
                     mesh.position.z = d.z;
                     const hit = new THREE.Mesh(new THREE.CylinderGeometry(45,45,5,16), new THREE.MeshBasicMaterial({visible:false}));
@@ -287,7 +308,7 @@
                     nodeCache.OS.push(mesh);
 
                 } else if(d.type === '係数') {
-                    const r = 70; // 広げる
+                    const r = 70;
                     const ang = (d.angle/8)*Math.PI*2;
                     const fx = Math.cos(ang)*r;
                     const fy = Math.sin(ang)*r;
@@ -314,8 +335,7 @@
                         nodeCache.INPUT.push(mesh);
                     } else if(d.type === '五感') {
                         nodeCache.SENSE.push(mesh);
-                        // Connect SENSE to INPUT
-                         const pts = [new THREE.Vector3(d.x,d.y,d.z), new THREE.Vector3(0,0,-180)];
+                        const pts = [new THREE.Vector3(d.x,d.y,d.z), new THREE.Vector3(0,0,-180)];
                          const lGeo = new THREE.BufferGeometry().setFromPoints(pts);
                          mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.1, transparent:true})));
                     } else if(d.type === 'OUTPUT') {
@@ -353,29 +373,24 @@
             memoryGeo = pGeo;
         }
 
-        // 5感からの流星群生成
         function buildSenseFlow() {
             const pGeo = new THREE.BufferGeometry();
             const count = 100;
             const pos = new Float32Array(count*3);
-            for(let i=0; i<count; i++) {
-                pos[i*3] = 0; pos[i*3+1] = 0; pos[i*3+2] = 0;
-            }
+            for(let i=0; i<count; i++) { pos[i*3] = 0; pos[i*3+1] = 0; pos[i*3+2] = 0; }
             pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
             const pMat = new THREE.PointsMaterial({color:0xaaffff, size:2, map:glowTex, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false});
             const sys = new THREE.Points(pGeo, pMat);
             mainGroup.add(sys);
             
-            // Sense particles data
             for(let i=0; i<count; i++) {
                 senseParticles.push({
                     index: i,
-                    target: new THREE.Vector3(0,0,-180), // Main Input
+                    target: new THREE.Vector3(0,0,-180),
                     pos: new THREE.Vector3(-500, (Math.random()-0.5)*200, -180 + (Math.random()-0.5)*50),
                     speed: 2 + Math.random()*3
                 });
             }
-            // Assign geometry to system
             sys.userData.particles = senseParticles;
         }
 
@@ -385,7 +400,7 @@
                 z: -200,
                 speed: 3 + Math.random() * 2,
                 color: new THREE.Color(0xffffff),
-                state: 0 // 0:OS, 1:DB, 2:Factor, 3:Filter
+                state: 0
             };
             meteor.mesh.scale.set(12, 12, 1);
             meteor.mesh.position.set(0, 0, -200);
@@ -396,13 +411,11 @@
         function spawnMemory(origin) {
             if (!nodeCache.DB || nodeCache.DB.length === 0) return;
             const targetMesh = nodeCache.DB[Math.floor(Math.random()*nodeCache.DB.length)];
-            const target = targetMesh.position;
-            const color = targetMesh.material.color;
             
             memoryParticles.push({
                 pos: origin.clone(),
-                target: target.clone(),
-                color: color.clone(),
+                target: targetMesh.position.clone(),
+                color: targetMesh.material.color.clone(),
                 life: 1.0
             });
         }
@@ -411,20 +424,18 @@
             requestAnimationFrame(animate);
             TWEEN.update();
             controls.update();
-            
             const time = clock.getElapsedTime();
             const cycle = 8.0;
             const t = time % cycle;
             updatePhase(t);
 
-            // 1. Sense Flow (Outside -> Input)
+            // Sense
             const sGeo = mainGroup.children.find(c => c.userData && c.userData.particles)?.geometry;
             if(sGeo) {
                 const posAttr = sGeo.attributes.position;
                 senseParticles.forEach(p => {
-                    p.pos.lerp(p.target, 0.05); // Move to input
+                    p.pos.lerp(p.target, 0.05);
                     if(p.pos.distanceTo(p.target) < 5) {
-                        // Reset to far left space
                         p.pos.set(-400 - Math.random()*200, (Math.random()-0.5)*300, -180 + (Math.random()-0.5)*100);
                     }
                     posAttr.setXYZ(p.index, p.pos.x, p.pos.y, p.pos.z);
@@ -432,62 +443,56 @@
                 posAttr.needsUpdate = true;
             }
 
-            // 2. Main Pipeline Meteors
+            // Meteors
             if(Math.random() > 0.92) spawnMeteor();
-
             for(let i=meteors.length-1; i>=0; i--) {
                 const m = meteors[i];
                 m.z += m.speed;
                 m.mesh.position.z = m.z;
 
-                if(m.state === 3 && m.z > 130) { // Filter Gate
+                if(m.state === 3 && m.z > 130) {
                     m.state = 4;
                     const c1 = new THREE.Color(0x00ffff);
                     const c2 = new THREE.Color(0xff0055);
                     const filterCol = c1.lerp(c2, cfRatio);
                     m.mesh.material.color.lerp(filterCol, 0.8);
                 }
-                if(m.state === 0 && m.z > -110) { // OS Area
+                if(m.state === 0 && m.z > -110) {
                     m.state = 1;
-                    m.color.setHSL(Math.random(), 1.0, 0.6); 
+                    m.color.setHSL(Math.random(), 1.0, 0.6);
                     m.mesh.material.color.copy(m.color);
                 }
-                if(m.state === 1 && m.z > -10) { // DB Area
+                if(m.state === 1 && m.z > -10) {
                     m.state = 2;
                     for(let k=0; k<4; k++) spawnMemory(m.mesh.position);
                 }
-                if(m.state === 2 && m.z > 60) { // Factor Area
+                if(m.state === 2 && m.z > 60) {
                     m.state = 3;
                     m.speed *= 1.1;
                 }
-                
                 if(m.z > 180) {
                     mainGroup.remove(m.mesh);
                     meteors.splice(i, 1);
                 }
             }
 
-            // 3. Memories Update
-            const mPositions = memoryGeo.attributes.position.array;
-            const mColors = memoryGeo.attributes.color.array;
-            for(let i=0; i<300; i++) { mPositions[i*3] = 0; mPositions[i*3+1] = 0; mPositions[i*3+2] = 0; }
+            // Memories
+            const mPos = memoryGeo.attributes.position.array;
+            const mCol = memoryGeo.attributes.color.array;
+            for(let i=0; i<300; i++) { mPos[i*3]=0; mPos[i*3+1]=0; mPos[i*3+2]=0; }
             
             memoryParticles = memoryParticles.filter(p => p.life > 0);
             memoryParticles.forEach((p, i) => {
                 if(i >= 300) return;
                 p.life -= 0.015;
-                p.pos.lerp(p.target, 0.08); // Fast suction
-                mPositions[i*3] = p.pos.x;
-                mPositions[i*3+1] = p.pos.y;
-                mPositions[i*3+2] = p.pos.z;
-                mColors[i*3] = p.color.r;
-                mColors[i*3+1] = p.color.g;
-                mColors[i*3+2] = p.color.b;
+                p.pos.lerp(p.target, 0.08);
+                mPos[i*3] = p.pos.x; mPos[i*3+1] = p.pos.y; mPos[i*3+2] = p.pos.z;
+                mCol[i*3] = p.color.r; mCol[i*3+1] = p.color.g; mCol[i*3+2] = p.color.b;
             });
             memoryGeo.attributes.position.needsUpdate = true;
             memoryGeo.attributes.color.needsUpdate = true;
 
-            // Filter Color
+            // Filter
             const fCol1 = new THREE.Color(0x00ffff);
             const fCol2 = new THREE.Color(0xff0055);
             if(cfFilterMesh[0]) {
@@ -500,4 +505,76 @@
         }
 
         function updatePhase(t) {
-            document.querySelectorAll('.phase-item').forEach(e=>e.classList.
+            document.querySelectorAll('.phase-item').forEach(e=>e.classList.remove('active'));
+            document.querySelectorAll('.phase-arrow').forEach(e=>e.classList.remove('active'));
+
+            if(t < 1.0) { 
+                document.getElementById('ph-sense').classList.add('active'); 
+                document.getElementById('ar-0').classList.add('active'); 
+            } else if(t < 2.0) { 
+                document.getElementById('ph-in').classList.add('active'); 
+                document.getElementById('ar-1').classList.add('active'); 
+            } else if(t < 3.5) { 
+                document.getElementById('ph-os').classList.add('active'); 
+                document.getElementById('ar-2').classList.add('active'); 
+            } else if(t < 5.0) { 
+                document.getElementById('ph-db').classList.add('active'); 
+                document.getElementById('ar-3').classList.add('active'); 
+            } else if(t < 6.5) { 
+                document.getElementById('ph-fc').classList.add('active'); 
+                document.getElementById('ar-4').classList.add('active'); 
+            } else { 
+                document.getElementById('ph-out').classList.add('active'); 
+            }
+        }
+
+        window.addEventListener('mousedown', e => {
+            if(e.target.closest('#panel') || e.target.closest('#cf-container')) return;
+            
+            controls.autoRotate = false; 
+            setTimeout(() => controls.autoRotate = true, 4000);
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(interactables);
+            
+            if(hits.length > 0) {
+                showPanel(hits[0].object.userData.data);
+            } else {
+                closePanel();
+            }
+        });
+
+        function showPanel(d) {
+            document.getElementById('p-tag').innerText = d.type;
+            document.getElementById('p-tag').style.background = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-title').innerText = d.name;
+            document.getElementById('p-title').style.color = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-desc').innerText = d.desc;
+            document.getElementById('p-role').innerText = d.role;
+            document.getElementById('p-thought').innerText = d.thought;
+            document.getElementById('panel').classList.add('active');
+        }
+        function closePanel() { document.getElementById('panel').classList.remove('active'); }
+        window.closePanel = closePanel;
+
+        function setupSlider() {
+            const track = document.getElementById('cf-track');
+            track.addEventListener('mousedown', e => {
+                const rect = track.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                cfRatio = Math.max(0, Math.min(1, x / rect.width));
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = init;
+    </script>
+</body>
+</html>
