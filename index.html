@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>SONALIA: COSMIC LIFE CYCLE</title>
+    <title>SONALIA: COSMIC LIFE CYCLE (FINAL)</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; cursor: grab; }
@@ -26,6 +26,10 @@
         .cf-bar-bg {
             width: 100%; height: 8px; background: #222; border: 1px solid #555; border-radius: 4px;
             position: relative; margin-top: 10px; box-shadow: 0 0 15px rgba(0,255,255,0.1); cursor: pointer;
+        }
+        .cf-fill {
+            position: absolute; top: 0; left: 0; height: 100%; width: 50%;
+            background: linear-gradient(90deg, #00ffff, #ff0055); opacity: 0.6;
         }
         .cf-knob {
             width: 16px; height: 24px; background: #fff; position: absolute; top: -8px; left: 50%;
@@ -53,11 +57,13 @@
         /* LOADER */
         #loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1s; cursor: pointer;
         }
         .load-text { font-size: 40px; color: #fff; font-weight: bold; letter-spacing: 6px; text-shadow: 0 0 30px #00ffff; }
         .load-sub { color: #00ffff; font-family: monospace; margin-top: 15px; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
+        
         #error-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(50,0,0,0.9); border: 1px solid red; padding: 20px; color: #fff; display: none; z-index: 10000; font-family: monospace; }
     </style>
 
@@ -82,7 +88,10 @@
 
         <div id="cf-container">
             <div class="cf-labels"><span>COGNITION</span><span>FEELING</span></div>
-            <div class="cf-bar-bg" id="cf-track"><div class="cf-knob" id="cf-knob"></div></div>
+            <div class="cf-bar-bg" id="cf-track">
+                <div class="cf-fill" id="cf-fill"></div>
+                <div class="cf-knob" id="cf-knob"></div>
+            </div>
         </div>
     </div>
 
@@ -103,8 +112,10 @@
 
     <script>
         window.onerror = function(msg, url, line) {
-            document.getElementById('error-box').style.display = 'block';
-            document.getElementById('error-box').innerHTML = "Error: " + msg;
+            const el = document.getElementById('error-box');
+            el.style.display = 'block';
+            el.innerHTML = "Error: " + msg + "<br>Line: " + line;
+            return false;
         };
 
         const NODES = [
@@ -145,6 +156,9 @@
         const interactables = [], meteors = [], outParticles = [], senseParticles = [];
         const clock = new THREE.Clock(), raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
         const nodeCache = { SENSE:[], INPUT:[], OS:[], DB:[], FACTOR:[], OUTPUT:[] };
+        
+        // 変数追加: フィルター用メッシュ配列
+        const cfFilterMesh = [];
 
         function init() {
             scene = new THREE.Scene();
@@ -169,6 +183,7 @@
             buildFilterGate();
             buildCosmicInflow(); // Space Meteors
             buildOutflow(); // Output Scatter
+            buildMemoryPool(); // Memory particles
 
             animate();
             setupSlider();
@@ -184,33 +199,21 @@
             return new THREE.CanvasTexture(c);
         }
 
-        // 五感アイコン描画用キャンバス
         function createIconTex(type) {
             const c = document.createElement('canvas'); c.width=128; c.height=128;
             const ctx = c.getContext('2d');
             ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = "#00ffff";
             ctx.beginPath();
-            
-            if(type==="EYE") { // 目
-                ctx.ellipse(64, 64, 40, 25, 0, 0, Math.PI*2);
-                ctx.moveTo(64, 64); ctx.arc(64, 64, 12, 0, Math.PI*2);
-            } else if(type==="EAR") { // 耳
-                ctx.arc(64, 64, 30, 0.5, Math.PI*1.5);
-                ctx.moveTo(64, 40); ctx.lineTo(64, 90);
-            } else if(type==="NOSE") { // 鼻
-                ctx.moveTo(64, 30); ctx.lineTo(40, 80); ctx.lineTo(88, 80);
-            } else if(type==="LIP") { // 口
-                ctx.ellipse(64, 64, 35, 15, 0, 0, Math.PI*2);
-                ctx.moveTo(35, 64); ctx.lineTo(93, 64);
-            } else { // 手
-                ctx.rect(40, 40, 48, 48);
-            }
+            if(type==="EYE") { ctx.ellipse(64, 64, 40, 25, 0, 0, Math.PI*2); ctx.moveTo(64, 64); ctx.arc(64, 64, 12, 0, Math.PI*2); }
+            else if(type==="EAR") { ctx.arc(64, 64, 30, 0.5, Math.PI*1.5); ctx.moveTo(64, 40); ctx.lineTo(64, 90); }
+            else if(type==="NOSE") { ctx.moveTo(64, 30); ctx.lineTo(40, 80); ctx.lineTo(88, 80); }
+            else if(type==="LIP") { ctx.ellipse(64, 64, 35, 15, 0, 0, Math.PI*2); ctx.moveTo(35, 64); ctx.lineTo(93, 64); }
+            else { ctx.rect(40, 40, 48, 48); }
             ctx.stroke();
             return new THREE.CanvasTexture(c);
         }
 
         function buildPipelineStructure() {
-            // Spine
             const spineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-220), new THREE.Vector3(0,0,220)]);
             mainGroup.add(new THREE.Line(spineGeo, new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3, linewidth: 2 })));
 
@@ -227,39 +230,29 @@
                     interactables.push(hit); mainGroup.add(hit);
                     nodeCache.OS.push(mesh);
                 } else if(d.type === '五感') {
-                    // Icon Sprite
                     const iconTex = createIconTex(d.icon);
                     mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTex, color: 0xaaffff, blending: THREE.AdditiveBlending }));
                     mesh.scale.set(20,20,1);
                     mesh.position.set(d.x, d.y, d.z);
-                    // Hitbox
                     const hit = new THREE.Mesh(new THREE.SphereGeometry(8), new THREE.MeshBasicMaterial({visible:false}));
                     hit.position.copy(mesh.position); hit.userData = { data: d };
                     interactables.push(hit); mainGroup.add(hit); mainGroup.add(mesh);
                     nodeCache.SENSE.push(mesh);
-                    
-                    // Line to Input
                     const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(d.x,d.y,d.z), new THREE.Vector3(0,0,-180)]);
                     mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:0x00ffff, opacity:0.1, transparent:true})));
-
                 } else if(d.type === '係数') {
-                    const r = 70;
-                    const ang = (d.angle/8)*Math.PI*2;
-                    const fx = Math.cos(ang)*r;
-                    const fy = Math.sin(ang)*r;
+                    const r = 70; const ang = (d.angle/8)*Math.PI*2;
+                    const fx = Math.cos(ang)*r; const fy = Math.sin(ang)*r;
                     mesh = new THREE.Mesh(new THREE.BoxGeometry(10,10,10), new THREE.MeshBasicMaterial({ color: col, wireframe: true }));
                     mesh.position.set(fx, fy, d.z);
                     mesh.userData = { data: d }; interactables.push(mesh);
                     nodeCache.FACTOR.push(mesh);
-                    // Cable
                     const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,d.z), new THREE.Vector3(fx,fy,d.z)]);
                     mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.3, transparent:true})));
-
                 } else {
                     mesh = new THREE.Mesh(new THREE.SphereGeometry(d.size, 16, 16), new THREE.MeshBasicMaterial({ color: col, wireframe: d.type==='DB' }));
                     mesh.position.set(d.x||0, d.y||0, d.z);
                     mesh.userData = { data: d }; interactables.push(mesh);
-                    
                     if(d.type === 'DB') {
                          nodeCache.DB.push(mesh);
                          const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,d.z), new THREE.Vector3(d.x,d.y,d.z)]);
@@ -267,7 +260,6 @@
                     } else if(d.type === 'INPUT') nodeCache.INPUT.push(mesh);
                     else if(d.type === 'OUTPUT') nodeCache.OUTPUT.push(mesh);
                 }
-
                 if(mesh && d.type !== '五感') {
                     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, blending: THREE.AdditiveBlending }));
                     spr.scale.set(d.size*4 || 40, d.size*4 || 40, 1);
@@ -285,9 +277,7 @@
             cfFilterMesh.push(gate);
         }
 
-        // 宇宙からの流入（Cosmic Inflow）
         function buildCosmicInflow() {
-            // 画面外から五感ポートへ飛ぶ流星群
             for(let i=0; i<50; i++) {
                 senseParticles.push({
                     mesh: new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xaaffff, blending: THREE.AdditiveBlending })),
@@ -300,7 +290,6 @@
             }
         }
 
-        // 出力後の拡散（Output Scatter）
         function buildOutflow() {
             for(let i=0; i<50; i++) {
                 outParticles.push({
@@ -312,6 +301,19 @@
                 outParticles[i].mesh.scale.set(0,0,1);
                 mainGroup.add(outParticles[i].mesh);
             }
+        }
+
+        function buildMemoryPool() {
+            const pGeo = new THREE.BufferGeometry();
+            const pos = new Float32Array(300 * 3);
+            const col = new Float32Array(300 * 3);
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            
+            memoryMat = new THREE.PointsMaterial({ size: 2, map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, vertexColors: true });
+            const sys = new THREE.Points(pGeo, memoryMat);
+            mainGroup.add(sys);
+            memoryGeo = pGeo;
         }
 
         function spawnMeteor() {
@@ -328,16 +330,29 @@
             meteors.push(meteor);
         }
 
+        function spawnMemory(origin) {
+            if (!nodeCache.DB || nodeCache.DB.length === 0) return;
+            const targetMesh = nodeCache.DB[Math.floor(Math.random()*nodeCache.DB.length)];
+            const target = targetMesh.position;
+            const color = targetMesh.material.color;
+            
+            memoryParticles.push({
+                pos: origin.clone(),
+                target: target.clone(),
+                color: color.clone(),
+                life: 1.0
+            });
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             TWEEN.update();
             controls.update();
             
-            // 1. Cosmic Inflow (Absorption)
+            // 1. Cosmic Inflow
             senseParticles.forEach(p => {
                 const dist = p.pos.distanceTo(p.target);
                 if(dist < 10) {
-                    // Reset to space
                     p.pos.set(-600 - Math.random()*400, (Math.random()-0.5)*400, -180 + (Math.random()-0.5)*100);
                 } else {
                     const dir = p.target.clone().sub(p.pos).normalize();
@@ -346,37 +361,56 @@
                 p.mesh.position.copy(p.pos);
             });
 
-            // 2. Main Process
-            if(Math.random() > 0.9) spawnMeteor();
-
+            // 2. Meteors
+            if(Math.random() > 0.92) spawnMeteor();
             for(let i=meteors.length-1; i>=0; i--) {
                 const m = meteors[i];
                 m.z += m.speed;
                 m.mesh.position.z = m.z;
 
-                // C:F Color Logic
-                if(m.state === 3 && m.z > 130) { // Filter
+                if(m.state === 3 && m.z > 130) {
                     m.state = 4;
                     const c1 = new THREE.Color(0x00ffff);
                     const c2 = new THREE.Color(0xff0055);
                     const filterCol = c1.lerp(c2, cfRatio);
                     m.mesh.material.color.lerp(filterCol, 0.8);
                 }
-                if(m.state === 0 && m.z > -110) { // OS
+                if(m.state === 0 && m.z > -110) {
                     m.state = 1;
-                    m.color.setHSL(Math.random(), 1.0, 0.6); 
+                    m.color.setHSL(Math.random(), 1.0, 0.6);
                     m.mesh.material.color.copy(m.color);
                 }
-                
+                if(m.state === 1 && m.z > -10) {
+                    m.state = 2;
+                    for(let k=0; k<4; k++) spawnMemory(m.mesh.position);
+                }
+                if(m.state === 2 && m.z > 60) {
+                    m.state = 3;
+                    m.speed *= 1.1;
+                }
                 if(m.z > 160) {
                     mainGroup.remove(m.mesh);
                     meteors.splice(i, 1);
-                    // Trigger Outflow
                     triggerOutflow();
                 }
             }
 
-            // 3. Outflow (Emission to Space)
+            // 3. Memories
+            const mPos = memoryGeo.attributes.position.array;
+            const mCol = memoryGeo.attributes.color.array;
+            for(let i=0; i<300; i++) { mPos[i*3]=0; mPos[i*3+1]=0; mPos[i*3+2]=0; }
+            memoryParticles = memoryParticles.filter(p => p.life > 0);
+            memoryParticles.forEach((p, i) => {
+                if(i >= 300) return;
+                p.life -= 0.015;
+                p.pos.lerp(p.target, 0.08);
+                mPos[i*3] = p.pos.x; mPos[i*3+1] = p.pos.y; mPos[i*3+2] = p.pos.z;
+                mCol[i*3] = p.color.r; mCol[i*3+1] = p.color.g; mCol[i*3+2] = p.color.b;
+            });
+            memoryGeo.attributes.position.needsUpdate = true;
+            memoryGeo.attributes.color.needsUpdate = true;
+
+            // 4. Outflow
             outParticles.forEach(p => {
                 if(p.life > 0) {
                     p.life -= 0.02;
@@ -389,13 +423,14 @@
                 }
             });
 
-            // Filter Color
+            // Filter
             const fCol1 = new THREE.Color(0x00ffff);
             const fCol2 = new THREE.Color(0xff0055);
             if(cfFilterMesh[0]) {
                 cfFilterMesh[0].material.color.copy(fCol1).lerp(fCol2, cfRatio);
             }
             document.getElementById('cf-knob').style.left = (cfRatio*100) + '%';
+            document.getElementById('cf-fill').style.width = (cfRatio*100) + '%';
 
             renderer.render(scene, camera);
         }
@@ -432,13 +467,10 @@
         }
 
         function showPanel(d, col) {
-            let hex = '#ffffff';
-            if(d.color) hex = '#' + new THREE.Color(d.color).getHexString();
-            
             document.getElementById('p-tag').innerText = d.type;
-            document.getElementById('p-tag').style.background = hex;
+            document.getElementById('p-tag').style.background = '#'+new THREE.Color(d.color).getHexString();
             document.getElementById('p-title').innerText = d.name;
-            document.getElementById('p-title').style.color = hex;
+            document.getElementById('p-title').style.color = '#'+new THREE.Color(d.color).getHexString();
             document.getElementById('p-desc').innerText = d.desc;
             document.getElementById('p-role').innerText = d.role;
             document.getElementById('p-thought').innerText = d.thought;
