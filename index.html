@@ -343,4 +343,348 @@
                     // Connect
                     const lGeo = new THREE.Geometry();
                     lGeo.vertices.push(new THREE.Vector3(d.x,d.y,d.z), new THREE.Vector3(0,0,-180));
-                    mainGroup.
+                    mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.15, transparent:true})));
+
+                } else {
+                    mesh = new THREE.Mesh(new THREE.SphereGeometry(d.size, 16, 16), new THREE.MeshBasicMaterial({ color: col, wireframe: d.type==='DB' }));
+                    mesh.position.set(d.x||0, d.y||0, d.z);
+                    
+                    const hit = new THREE.Mesh(new THREE.SphereGeometry(d.size*2), new THREE.MeshBasicMaterial({visible:false}));
+                    hit.position.copy(mesh.position); hit.userData = { data: d };
+                    interactables.push(hit); mainGroup.add(hit);
+
+                    if(d.type === 'DB') {
+                         nodeCache.DB.push(mesh);
+                         const lGeo = new THREE.Geometry();
+                         lGeo.vertices.push(new THREE.Vector3(0,0,d.z), new THREE.Vector3(d.x,d.y,d.z));
+                         mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.4, transparent:true})));
+                    } else if(d.type === 'INPUT') nodeCache.INPUT.push(mesh);
+                    else if(d.type === 'OUTPUT') nodeCache.OUTPUT.push(mesh);
+                    
+                    if(d.type !== '五感') mainGroup.add(mesh);
+                }
+
+                if(mesh && d.type !== '五感') {
+                    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, blending: THREE.AdditiveBlending }));
+                    spr.scale.set(d.size*5 || 50, d.size*5 || 50, 1);
+                    if(d.type !== '係数') mesh.add(spr); 
+                    else mainGroup.add(spr); // Factor sprites separate
+                    
+                    if(d.type === '係数') mesh.userData.spr = spr;
+                }
+                idMap[d.id] = {mesh: mesh, data: d};
+            });
+        }
+
+        function buildFilterGate() {
+            const geo = new THREE.TorusGeometry(30, 3, 16, 64);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, wireframe: true });
+            const gate = new THREE.Mesh(geo, mat);
+            gate.position.z = 130;
+            mainGroup.add(gate);
+            cfFilterMesh.push(gate);
+        }
+
+        function buildMemoryPool() {
+            const pGeo = new THREE.BufferGeometry();
+            const count = 500;
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            memoryMat = new THREE.PointsMaterial({ size: 3, map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, vertexColors: true });
+            const sys = new THREE.Points(pGeo, memoryMat);
+            mainGroup.add(sys);
+            memoryGeo = pGeo;
+        }
+
+        function buildSenseFlow() {
+            for(let i=0; i<50; i++) {
+                senseParticles.push({
+                    mesh: new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xaaffff, blending: THREE.AdditiveBlending })),
+                    target: nodeCache.SENSE[Math.floor(Math.random()*5)].position,
+                    pos: new THREE.Vector3(-600 - Math.random()*400, (Math.random()-0.5)*400, -180 + (Math.random()-0.5)*100),
+                    speed: 3 + Math.random()*4
+                });
+                senseParticles[i].mesh.scale.set(8,8,1);
+                mainGroup.add(senseParticles[i].mesh);
+            }
+        }
+
+        function buildOutflow() {
+            for(let i=0; i<80; i++) {
+                outParticles.push({
+                    mesh: new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffaa00, blending: THREE.AdditiveBlending })),
+                    pos: new THREE.Vector3(0,0,160),
+                    vel: new THREE.Vector3((Math.random()-0.5)*2, (Math.random()-0.5)*2, 2+Math.random()*3),
+                    life: 0
+                });
+                outParticles[i].mesh.scale.set(0,0,1);
+                mainGroup.add(outParticles[i].mesh);
+            }
+        }
+
+        function buildFactorParticles() {
+            nodeCache.FACTOR.forEach(mesh => {
+                for(let i=0; i<5; i++) {
+                    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: mesh.userData.data.color, blending: THREE.AdditiveBlending }));
+                    spr.scale.set(4,4,1);
+                    mainGroup.add(spr);
+                    factorParticles.push({
+                        mesh: spr, parent: mesh,
+                        offset: new THREE.Vector3((Math.random()-0.5)*20, (Math.random()-0.5)*20, (Math.random()-0.5)*20),
+                        speed: 0.05 + Math.random()*0.05,
+                        life: Math.random()
+                    });
+                }
+            });
+        }
+
+        function spawnMeteor() {
+            const meteor = {
+                mesh: new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffffff, blending: THREE.AdditiveBlending })),
+                z: -180,
+                speed: 3 + Math.random() * 2,
+                color: new THREE.Color(0xffffff),
+                state: 0
+            };
+            meteor.mesh.scale.set(12, 12, 1);
+            meteor.mesh.position.set(0, 0, -180);
+            mainGroup.add(meteor.mesh);
+            meteors.push(meteor);
+        }
+
+        function spawnMemory(origin) {
+            if (!nodeCache.DB || nodeCache.DB.length === 0) return;
+            const targetMesh = nodeCache.DB[Math.floor(Math.random()*nodeCache.DB.length)];
+            memoryParticles.push({
+                pos: origin.clone(),
+                target: targetMesh.position.clone(),
+                color: targetMesh.material.color.clone(),
+                life: 1.0
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+            
+            const time = clock.getElapsedTime();
+            const cycle = 8.0;
+            const t = time % cycle;
+            updatePhase(t);
+
+            // 0. Factor Rotation & Particles
+            const rotAngle = time * 0.5;
+            nodeCache.FACTOR.forEach(mesh => {
+                const d = mesh.userData.data;
+                const r = 100;
+                const baseAng = (d.angle/8)*Math.PI*2;
+                const curAng = baseAng + rotAngle;
+                mesh.position.x = Math.cos(curAng)*r;
+                mesh.position.y = Math.sin(curAng)*r;
+                // Update cable
+                const cable = mesh.userData.cable;
+                if(cable) {
+                    cable.geometry.vertices[1].copy(mesh.position);
+                    cable.geometry.verticesNeedUpdate = true;
+                }
+                // Update sprite
+                if(mesh.userData.spr) mesh.userData.spr.position.copy(mesh.position);
+            });
+            
+            factorParticles.forEach(p => {
+                p.life -= p.speed;
+                if(p.life <= 0) { p.life = 1; p.mesh.position.copy(p.parent.position); }
+                p.mesh.position.add(p.offset.clone().multiplyScalar(0.1));
+                p.mesh.material.opacity = p.life;
+            });
+
+            // 1. Sense Flow
+            senseParticles.forEach(p => {
+                const dist = p.mesh.position.distanceTo(p.target);
+                if(dist < 10) {
+                    p.mesh.position.set(-600 - Math.random()*400, (Math.random()-0.5)*400, -180 + (Math.random()-0.5)*100);
+                } else {
+                    const dir = p.target.clone().sub(p.mesh.position).normalize();
+                    p.mesh.position.add(dir.multiplyScalar(p.speed));
+                }
+            });
+
+            // 2. Meteors
+            if(Math.random() > 0.92) spawnMeteor();
+            for(let i=meteors.length-1; i>=0; i--) {
+                const m = meteors[i];
+                m.z += m.speed;
+                m.mesh.position.z = m.z;
+
+                if(m.state === 3 && m.z > 130) {
+                    m.state = 4;
+                    const c1 = new THREE.Color(0x00ffff);
+                    const c2 = new THREE.Color(0xff0055);
+                    const filterCol = c1.lerp(c2, cfRatio);
+                    m.mesh.material.color.lerp(filterCol, 0.8);
+                }
+                if(m.state === 0 && m.z > -110) {
+                    m.state = 1;
+                    m.color.setHSL(Math.random(), 1.0, 0.6);
+                    m.mesh.material.color.copy(m.color);
+                }
+                if(m.state === 1 && m.z > -10) {
+                    m.state = 2;
+                    for(let k=0; k<4; k++) spawnMemory(m.mesh.position);
+                }
+                if(m.state === 2 && m.z > 60) {
+                    m.state = 3;
+                    m.speed *= 1.1;
+                }
+                if(m.z > 160) {
+                    mainGroup.remove(m.mesh);
+                    meteors.splice(i, 1);
+                    triggerOutflow();
+                }
+            }
+
+            // 3. Memories
+            const mPos = memoryGeo.attributes.position.array;
+            const mCol = memoryGeo.attributes.color.array;
+            for(let i=0; i<300; i++) { mPos[i*3]=0; mPos[i*3+1]=0; mPos[i*3+2]=0; }
+            memoryParticles = memoryParticles.filter(p => p.life > 0);
+            memoryParticles.forEach((p, i) => {
+                if(i >= 300) return;
+                p.life -= 0.015;
+                p.pos.lerp(p.target, 0.08);
+                mPos[i*3] = p.pos.x; mPos[i*3+1] = p.pos.y; mPos[i*3+2] = p.pos.z;
+                mCol[i*3] = p.color.r; mCol[i*3+1] = p.color.g; mCol[i*3+2] = p.color.b;
+            });
+            memoryGeo.attributes.position.needsUpdate = true;
+            memoryGeo.attributes.color.needsUpdate = true;
+
+            // 4. Outflow
+            outParticles.forEach(p => {
+                if(p.life > 0) {
+                    p.life -= 0.02;
+                    p.pos.add(p.vel);
+                    p.mesh.position.copy(p.pos);
+                    p.mesh.scale.setScalar(20 * p.life);
+                    p.mesh.material.opacity = p.life;
+                } else {
+                    p.mesh.scale.set(0,0,0);
+                }
+            });
+
+            // Filter
+            const fCol1 = new THREE.Color(0x00ffff);
+            const fCol2 = new THREE.Color(0xff0055);
+            if(cfFilterMesh[0]) {
+                cfFilterMesh[0].material.color.copy(fCol1).lerp(fCol2, cfRatio);
+            }
+            document.getElementById('cf-knob').style.left = (cfRatio*100) + '%';
+            document.getElementById('cf-fill').style.width = (cfRatio*100) + '%';
+
+            renderer.render(scene, camera);
+        }
+
+        function updatePhase(t) {
+            document.querySelectorAll('.phase-item').forEach(e=>e.classList.remove('active'));
+            document.querySelectorAll('.phase-arrow').forEach(e=>e.classList.remove('active'));
+            if(t<1.0) { document.getElementById('ph-sense').classList.add('active'); document.getElementById('ar-0').classList.add('active'); }
+            else if(t<2.0) { document.getElementById('ph-in').classList.add('active'); document.getElementById('ar-1').classList.add('active'); }
+            else if(t<3.5) { document.getElementById('ph-os').classList.add('active'); document.getElementById('ar-2').classList.add('active'); }
+            else if(t<5.0) { document.getElementById('ph-db').classList.add('active'); document.getElementById('ar-3').classList.add('active'); }
+            else if(t<6.5) { document.getElementById('ph-fc').classList.add('active'); document.getElementById('ar-4').classList.add('active'); }
+            else { document.getElementById('ph-out').classList.add('active'); }
+        }
+
+        function triggerOutflow() {
+            const p = outParticles.find(p => p.life <= 0);
+            if(p) {
+                p.life = 1.0;
+                p.pos.set(0,0,160);
+                p.vel.set((Math.random()-0.5)*3, (Math.random()-0.5)*3, 2+Math.random()*2);
+            }
+        }
+
+        window.addEventListener('mousedown', e => {
+            if(e.target.closest('#panel') || e.target.closest('#cf-container') || e.target.closest('#phase-indicator')) return;
+            
+            controls.autoRotate = false; 
+            setTimeout(() => controls.autoRotate = true, 4000);
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(interactables);
+            if(hits.length > 0) {
+                showPanel(hits[0].object.userData.data, hits[0].object.userData.color);
+            } else {
+                closePanel();
+            }
+        });
+        
+        function focusPhase(phase) {
+            let targetGroup = null;
+            if(phase === 'SENSE') targetGroup = nodeCache.SENSE;
+            else if(phase === 'IN') targetGroup = nodeCache.INPUT;
+            else if(phase === 'OS') targetGroup = nodeCache.OS;
+            else if(phase === 'DB') targetGroup = nodeCache.DB;
+            else if(phase === 'FACTOR') targetGroup = nodeCache.FACTOR;
+            else if(phase === 'OUT') targetGroup = nodeCache.OUTPUT;
+            
+            if(targetGroup && targetGroup.length > 0) {
+                const t = targetGroup[0];
+                // Camera move to target Z
+                const targetZ = t.position.z;
+                new TWEEN.Tween(camera.position)
+                    .to({x: 100, y: 50, z: targetZ}, 1500)
+                    .easing(TWEEN.Easing.Cubic.Out)
+                    .start();
+                    
+                // Open first item panel
+                showPanel(t.userData.data);
+            }
+        }
+        window.focusPhase = focusPhase;
+
+        function setupSlider() {
+            const track = document.getElementById('cf-track');
+            track.addEventListener('mousedown', e => {
+                const rect = track.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                cfRatio = Math.max(0, Math.min(1, x / rect.width));
+            });
+        }
+
+        function showPanel(d, col) {
+            let hex = '#ffffff';
+            if(d.color) hex = '#' + new THREE.Color(d.color).getHexString();
+            document.getElementById('p-tag').innerText = d.type;
+            document.getElementById('p-tag').style.background = hex;
+            document.getElementById('p-title').innerText = d.name;
+            document.getElementById('p-title').style.color = hex;
+            document.getElementById('p-desc').innerText = d.desc;
+            document.getElementById('p-role').innerText = d.role;
+            document.getElementById('p-thought').innerText = d.thought;
+            document.getElementById('panel').classList.add('active');
+        }
+        function closePanel() { document.getElementById('panel').classList.remove('active'); }
+        window.closePanel = closePanel;
+
+        function startApp() {
+            document.getElementById('loader').style.opacity = 0;
+            setTimeout(() => { document.getElementById('loader').style.display='none'; }, 500);
+        }
+        window.startApp = startApp;
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = init;
+
+    </script>
+</body>
+</html>
