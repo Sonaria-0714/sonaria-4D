@@ -2,12 +2,13 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>SONALIA: FINAL MASTERPIECE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SONALIA: LAYERED DIAMOND ARCHITECTURE</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; }
 
-        /* UI */
+        /* UI LAYER */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         
         #hud-title {
@@ -15,7 +16,7 @@
             border-left: 4px solid #00ffff; padding-left: 20px;
             background: linear-gradient(90deg, rgba(0,20,30,0.9), transparent);
         }
-        h1 { margin: 0; font-size: 32px; color: #fff; text-shadow: 0 0 20px #00ffff; letter-spacing: 4px; }
+        h1 { margin: 0; font-size: 36px; color: #fff; text-shadow: 0 0 20px #00ffff; letter-spacing: 4px; font-weight: 900; }
         p { margin: 5px 0 0; color: #00ffff; font-size: 14px; letter-spacing: 2px; }
 
         /* PHASE INDICATOR */
@@ -29,16 +30,17 @@
             border: 2px solid rgba(0, 255, 255, 0.4); box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
         .phase-item {
-            color: #888; font-size: 13px; font-weight: bold; letter-spacing: 2px; transition: 0.3s;
+            color: #888; font-size: 12px; font-weight: bold; letter-spacing: 2px; transition: 0.3s;
             position: relative; padding: 10px; cursor: pointer;
         }
-        .phase-item.active { color: #fff; text-shadow: 0 0 15px #00ffff; transform: scale(1.2); }
+        .phase-item:hover { color: #fff; text-shadow: 0 0 10px #00ffff; }
+        .phase-item.active { color: #00ffff; transform: scale(1.2); text-shadow: 0 0 20px #00ffff; }
         .phase-item.active::after {
             content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
             width: 100%; height: 3px; background: #00ffff; box-shadow: 0 0 15px #00ffff;
         }
         .phase-arrow { color: #444; font-size: 14px; }
-        .phase-arrow.active { color: #00ffff; animation: flow 0.8s infinite; }
+        .phase-arrow.active { color: #00ffff; animation: flow 0.5s infinite; }
         @keyframes flow { 0%{opacity:0; transform:translateX(-4px);} 100%{opacity:1; transform:translateX(4px);} }
 
         /* C:F METER */
@@ -59,11 +61,11 @@
             position: absolute; top: -7px; left: 50%;
             transform: translateX(-50%); box-shadow: 0 0 20px #fff; transition: left 0.1s;
         }
-        .cf-labels { display: flex; justify-content: space-between; font-size: 13px; color: #88aaff; font-weight: bold; }
+        .cf-labels { display: flex; justify-content: space-between; font-size: 13px; color: #88aaff; font-weight: bold; letter-spacing: 2px; }
 
         /* PANEL */
         #panel {
-            position: absolute; top: 0; right: 0; width: 450px; height: 100%;
+            position: absolute; top: 0; right: 0; width: 400px; height: 100%;
             background: rgba(6, 10, 14, 0.98); border-left: 3px solid rgba(0,255,255,0.4);
             transform: translateX(100%); transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
             color: #eee; display: flex; flex-direction: column; z-index: 20; pointer-events: auto;
@@ -72,7 +74,7 @@
         #panel.active { transform: translateX(0); }
         .p-head { padding: 50px 40px 30px; border-bottom: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, rgba(0,255,255,0.1), transparent); }
         .p-tag { font-size: 12px; padding: 6px 15px; border-radius: 4px; background: #00ffff; color: #000; font-weight: 900; }
-        .p-title { font-size: 36px; margin: 20px 0 0; color: #fff; text-shadow: 0 0 30px currentColor; }
+        .p-title { font-size: 36px; margin: 20px 0 0; color: #fff; text-shadow: 0 0 30px currentColor; font-weight: 300; }
         .p-body { padding: 40px; overflow-y: auto; flex: 1; }
         .row { margin-bottom: 40px; }
         .label { font-size: 13px; color: #00ffff; border-bottom: 1px solid rgba(255,255,255,0.2); display: block; margin-bottom: 10px; }
@@ -103,13 +105,13 @@
 
     <div id="loader" onclick="startApp()">
         <div class="load-text">SONALIA</div>
-        <div class="load-sub">LOADING MASTERPIECE...</div>
+        <div class="load-sub">LOADING LAYERED SYSTEM...</div>
     </div>
 
     <div id="ui-layer">
         <div id="hud-title">
             <h1>思考回路マップ</h1>
-            <p>GRAND UNIFIED ARCHITECTURE</p>
+            <p>4-LAYER DIAMOND LAYERS</p>
         </div>
 
         <div id="cf-container">
@@ -162,7 +164,7 @@
 
         // --- DATA DEFINITION ---
         const NODES = [
-            // 0. 5 SENSES (Vertical Stack on Left)
+            // 0. 5 SENSES (Left Side - Vertical)
             { id:"EYE", type:"五感", name:"視覚", color:0xAAFFFF, x:-250, y:60, z:-100, size:8, icon:"EYE", desc:"光情報の受信。", role:"Sensor", thought:"(Seeing)" },
             { id:"EAR", type:"五感", name:"聴覚", color:0xAAFFFF, x:-250, y:30, z:-100, size:8, icon:"EAR", desc:"音情報の受信。", role:"Sensor", thought:"(Hearing)" },
             { id:"NOSE", type:"五感", name:"嗅覚", color:0xAAFFFF, x:-250, y:0, z:-100, size:8, icon:"NOSE", desc:"化学情報の受信。", role:"Sensor", thought:"(Smelling)" },
@@ -172,30 +174,44 @@
             // 1. INPUT
             { id:"IN", type:"INPUT", name:"入力統合", color:0xFFFFFF, x:-180, y:0, z:0, size:12, desc:"情報の統合。", role:"Input Hub", thought:"(Integrate)" },
             
-            // 2. OS (Diamond Layers)
-            { id:"OS4", type:"OS", name:"時間/協調", color:0xFFD700, x:-100, y:0, z:0, size:8, desc:"大局的判断。", role:"Meta View", thought:"「将来は？」" },
-            { id:"OS3", type:"OS", name:"報酬/意味", color:0xAA00FF, x:-80, y:0, z:0, size:8, desc:"価値判断。", role:"Value", thought:"「意味ある？」" },
-            { id:"OS2", type:"OS", name:"評価/所属", color:0x3388FF, x:-60, y:0, z:0, size:8, desc:"社会的判断。", role:"Social", thought:"「正しい？」" },
-            { id:"OS1", type:"OS", name:"生存/生活", color:0x00FFFF, x:-40, y:0, z:0, size:8, desc:"生存本能。", role:"Survival", thought:"「安全？」" },
+            // 2. OS (Diamond Layers - Stacked Vertically in Z)
+            // x: position in pipeline (horizontal)
+            // z: layer stacking (depth/vertical in visual metaphor)
+            // y: 0 (center)
+            
+            // 各層をX軸に少しずらして配置し、Z軸方向には高さを変える
+            // 画像のイメージ: 4枚の板が重なっている
+            // ここでは、X軸（左右）に配置しつつ、Y軸（上下）に層を重ねて表現する
+            // (視点によって立体的に見えるように)
+            
+            // Layer 4 (Top)
+            { id:"OS4", type:"OS", name:"時間/協調", color:0xFFD700, x:-100, y:30, z:0, size:10, desc:"大局的判断。", role:"Meta View", thought:"「将来は？」" },
+            // Layer 3
+            { id:"OS3", type:"OS", name:"報酬/意味", color:0xAA00FF, x:-80, y:10, z:0, size:10, desc:"価値判断。", role:"Value", thought:"「意味ある？」" },
+            // Layer 2
+            { id:"OS2", type:"OS", name:"評価/所属", color:0x3388FF, x:-60, y:-10, z:0, size:10, desc:"社会的判断。", role:"Social", thought:"「正しい？」" },
+            // Layer 1 (Bottom)
+            { id:"OS1", type:"OS", name:"生存/生活", color:0x00FFFF, x:-40, y:-30, z:0, size:10, desc:"生存本能。", role:"Survival", thought:"「安全？」" },
 
             // 3. DB (Stomach)
-            { id:"DB1", type:"DB", name:"欲求DB", color:0xFF5500, x:10, y:30, z:30, size:12, desc:"根源的渇望。", role:"Motivation", thought:"(Desire)" },
-            { id:"DB2", type:"DB", name:"情動DB", color:0x0044FF, x:10, y:30, z:-30, size:12, desc:"感情記憶。", role:"Emotion", thought:"(Feeling)" },
-            { id:"DB3", type:"DB", name:"価値観DB", color:0xFFCC00, x:10, y:-30, z:30, size:12, desc:"信念体系。", role:"Belief", thought:"(Rule)" },
-            { id:"DB4", type:"DB", name:"無意識DB", color:0x888888, x:10, y:-30, z:-30, size:12, desc:"自動反応。", role:"Reflex", thought:"(Habit)" },
+            { id:"DB1", type:"DB", name:"欲求DB", color:0xFF5500, x:20, y:30, z:30, size:12, desc:"根源的渇望。", role:"Motivation", thought:"(Desire)" },
+            { id:"DB2", type:"DB", name:"情動DB", color:0x0044FF, x:20, y:30, z:-30, size:12, desc:"感情記憶。", role:"Emotion", thought:"(Feeling)" },
+            { id:"DB3", type:"DB", name:"価値観DB", color:0xFFCC00, x:20, y:-30, z:30, size:12, desc:"信念体系。", role:"Belief", thought:"(Rule)" },
+            { id:"DB4", type:"DB", name:"無意識DB", color:0x888888, x:20, y:-30, z:-30, size:12, desc:"自動反応。", role:"Reflex", thought:"(Habit)" },
 
             // 4. FACTOR (Merry-Go-Round)
-            { id:"IQ", type:"係数", name:"IQ", color:0x00CCFF, x:70, angle:0, size:9, desc:"論理力。", role:"Logic", thought:"分析" },
-            { id:"EQ", type:"係数", name:"EQ", color:0xFF6666, x:70, angle:1, size:9, desc:"感情力。", role:"Empathy", thought:"共感" },
-            { id:"SQ", type:"係数", name:"SQ", color:0xFFCC00, x:70, angle:2, size:9, desc:"社会性。", role:"Social", thought:"適応" },
-            { id:"AQ", type:"係数", name:"AQ", color:0x888888, x:70, angle:3, size:9, desc:"逆境力。", role:"Resilience", thought:"忍耐" },
-            { id:"CQ", type:"係数", name:"CQ", color:0xAA00FF, x:70, angle:4, size:9, desc:"創造力。", role:"Idea", thought:"発想" },
-            { id:"HQ", type:"係数", name:"HQ", color:0xFFFFFF, x:70, angle:5, size:9, desc:"人間力。", role:"Ethics", thought:"誠実" },
-            { id:"MQ", type:"係数", name:"MQ", color:0xFF3300, x:70, angle:6, size:9, desc:"行動力。", role:"Action", thought:"実行" },
-            { id:"KQ", type:"係数", name:"KQ", color:0x00FF88, x:70, angle:7, size:9, desc:"知識力。", role:"Knowledge", thought:"応用" },
+            // Center X=100
+            { id:"IQ", type:"係数", name:"IQ", color:0x00CCFF, x:100, angle:0, size:9, desc:"論理力。", role:"Logic", thought:"分析" },
+            { id:"EQ", type:"係数", name:"EQ", color:0xFF6666, x:100, angle:1, size:9, desc:"感情力。", role:"Empathy", thought:"共感" },
+            { id:"SQ", type:"係数", name:"SQ", color:0xFFCC00, x:100, angle:2, size:9, desc:"社会性。", role:"Social", thought:"適応" },
+            { id:"AQ", type:"係数", name:"AQ", color:0x888888, x:100, angle:3, size:9, desc:"逆境力。", role:"Resilience", thought:"忍耐" },
+            { id:"CQ", type:"係数", name:"CQ", color:0xAA00FF, x:100, angle:4, size:9, desc:"創造力。", role:"Idea", thought:"発想" },
+            { id:"HQ", type:"係数", name:"HQ", color:0xFFFFFF, x:100, angle:5, size:9, desc:"人間力。", role:"Ethics", thought:"誠実" },
+            { id:"MQ", type:"係数", name:"MQ", color:0xFF3300, x:100, angle:6, size:9, desc:"行動力。", role:"Action", thought:"実行" },
+            { id:"KQ", type:"係数", name:"KQ", color:0x00FF88, x:100, angle:7, size:9, desc:"知識力。", role:"Knowledge", thought:"応用" },
 
             // 5. OUTPUT
-            { id:"OUT", type:"OUTPUT", name:"行動", color:0xFFFFFF, x:160, y:0, z:0, size:15, desc:"最終出力。", role:"Output", thought:"(Act)" }
+            { id:"OUT", type:"OUTPUT", name:"行動", color:0xFFFFFF, x:200, y:0, z:0, size:15, desc:"最終出力。", role:"Output", thought:"(Act)" }
         ];
 
         let scene, camera, renderer, controls;
@@ -213,14 +229,16 @@
         const cfFilterMesh = [];
         
         const nodeCache = { SENSE:[], INPUT:[], OS:[], DB:[], FACTOR:[], OUTPUT:[] };
-        const idMap = {}; // ID -> Object mapping
+        const idMap = {}; 
 
         function init() {
+            if (typeof THREE === 'undefined') throw new Error("Three.js failed");
+
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x000000, 0.0006);
 
             camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 5000);
-            camera.position.set(350, 120, 0);
+            camera.position.set(0, 100, 450);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -232,11 +250,12 @@
             controls.autoRotateSpeed = 0.1;
 
             mainGroup = new THREE.Group();
-            mainGroup.rotation.z = -Math.PI / 2; // Sleep posture
+            mainGroup.rotation.z = -Math.PI / 2; 
             scene.add(mainGroup);
 
-            factorGroup = new THREE.Group(); // Rotate for Merry-Go-Round
-            factorGroup.position.x = 70; // Factor position
+            factorGroup = new THREE.Group(); 
+            // Factor Group X position is handled by relative positioning
+            factorGroup.position.x = 100; 
             mainGroup.add(factorGroup);
 
             glowTex = createGlowTex();
@@ -276,12 +295,10 @@
         }
 
         function buildPipelineStructure() {
-            // Massive Spine
             const points = [new THREE.Vector3(-250,0,0), new THREE.Vector3(250,0,0)];
             const spineGeo = new THREE.TubeGeometry(new THREE.LineCurve3(points[0], points[1]), 20, 3, 8, false);
             const spineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.1, wireframe: true });
             mainGroup.add(new THREE.Mesh(spineGeo, spineMat));
-            // Core Line
             const coreGeo = new THREE.BufferGeometry().setFromPoints(points);
             mainGroup.add(new THREE.Line(coreGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, linewidth: 2 })));
 
@@ -290,29 +307,36 @@
                 const col = new THREE.Color(d.color);
 
                 if(d.type === 'OS') {
-                    // Diamond Shape (Octahedron)
-                    const geo = new THREE.OctahedronGeometry(55, 0); // 正ダイヤ
-                    mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.4, wireframe: true }));
-                    mesh.rotation.z = Math.PI/2; 
-                    mesh.position.x = d.x;
+                    // 【修正】板状のダイヤ (Box with 0 height, rotated 45deg)
+                    const geo = new THREE.BoxGeometry(50, 50, 2);
+                    mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, wireframe: true }));
+                    // ダイヤ型に見せるためにZ軸回転
+                    mesh.rotation.z = Math.PI / 4; 
+                    // 配置位置
+                    mesh.position.set(d.x, d.y, d.z);
                     
-                    const hit = new THREE.Mesh(new THREE.CylinderGeometry(55,55,10,4), new THREE.MeshBasicMaterial({visible:false}));
-                    hit.rotation.z = Math.PI/2; hit.position.x = d.x; hit.userData = { data: d };
+                    const hit = new THREE.Mesh(new THREE.BoxGeometry(50,50,5), new THREE.MeshBasicMaterial({visible:false}));
+                    hit.rotation.z = Math.PI / 4;
+                    hit.position.copy(mesh.position);
+                    hit.userData = { data: d };
                     interactables.push(hit); mainGroup.add(hit);
                     nodeCache.OS.push(mesh);
+                    
+                    // Fill
+                    const fill = new THREE.Mesh(new THREE.BoxGeometry(45, 45, 1), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.1 }));
+                    fill.rotation.z = Math.PI / 4;
+                    fill.position.copy(mesh.position);
+                    mainGroup.add(fill);
 
                 } else if(d.type === '係数') {
-                    // Add to Factor Group (Merry-Go-Round)
                     const r = 80;
                     const ang = (d.angle/8)*Math.PI*2;
                     const y = Math.cos(ang)*r;
                     const z = Math.sin(ang)*r;
                     mesh = new THREE.Mesh(new THREE.BoxGeometry(12,12,12), new THREE.MeshBasicMaterial({ color: col, wireframe: true }));
-                    // Local position relative to factorGroup
-                    mesh.position.set(0, y, z); 
+                    mesh.position.set(0, y, z); // Local to FactorGroup
                     mesh.userData = { data: d }; 
                     
-                    // Hitbox needs to follow rotation, so added to factorGroup
                     const hit = new THREE.Mesh(new THREE.SphereGeometry(15), new THREE.MeshBasicMaterial({visible:false}));
                     hit.position.set(0, y, z); hit.userData = { data: d };
                     interactables.push(hit); factorGroup.add(hit);
@@ -320,7 +344,6 @@
                     factorGroup.add(mesh);
                     nodeCache.FACTOR.push(mesh);
                     
-                    // Cable logic handled in animate
                     const lGeo = new THREE.Geometry();
                     lGeo.vertices.push(new THREE.Vector3(0,0,0), new THREE.Vector3(0,y,z));
                     const cable = new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.4, transparent:true}));
@@ -330,13 +353,13 @@
                 } else if (d.type === '五感') {
                     const iconTex = createIconTex(d.icon);
                     mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTex, color: 0xaaffff, blending: THREE.AdditiveBlending }));
-                    mesh.scale.set(30,30,1);
+                    mesh.scale.set(25,25,1);
                     mesh.position.set(d.x, d.y, d.z);
                     const hit = new THREE.Mesh(new THREE.SphereGeometry(15), new THREE.MeshBasicMaterial({visible:false}));
                     hit.position.copy(mesh.position); hit.userData = { data: d };
                     interactables.push(hit); mainGroup.add(hit); mainGroup.add(mesh);
                     nodeCache.SENSE.push(mesh);
-                    // Cable to Input
+                    
                     const lGeo = new THREE.Geometry();
                     lGeo.vertices.push(new THREE.Vector3(d.x,d.y,d.z), new THREE.Vector3(-180,0,0));
                     mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:0x00ffff, opacity:0.15, transparent:true})));
@@ -344,6 +367,7 @@
                 } else {
                     mesh = new THREE.Mesh(new THREE.SphereGeometry(d.size, 16, 16), new THREE.MeshBasicMaterial({ color: col, wireframe: d.type==='DB' }));
                     mesh.position.set(d.x||0, d.y||0, d.z||0);
+                    
                     const hit = new THREE.Mesh(new THREE.SphereGeometry(d.size*3), new THREE.MeshBasicMaterial({visible:false}));
                     hit.position.copy(mesh.position); hit.userData = { data: d };
                     interactables.push(hit); mainGroup.add(hit);
@@ -351,7 +375,7 @@
                     if(d.type === 'DB') {
                          nodeCache.DB.push(mesh);
                          const lGeo = new THREE.Geometry();
-                         lGeo.vertices.push(new THREE.Vector3(d.x,0,0), new THREE.Vector3(d.x,d.y,d.z));
+                         lGeo.vertices.push(new THREE.Vector3(20,0,0), new THREE.Vector3(d.x,d.y,d.z)); // Connect to spine
                          mainGroup.add(new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:col, opacity:0.4, transparent:true})));
                     } else if(d.type === 'INPUT') nodeCache.INPUT.push(mesh);
                     else if(d.type === 'OUTPUT') nodeCache.OUTPUT.push(mesh);
@@ -364,6 +388,7 @@
                     spr.scale.set(d.size*6 || 60, d.size*6 || 60, 1);
                     if(d.type === '係数') mesh.add(spr);
                     else mainGroup.add(spr);
+                    
                     if(d.type !== '係数') spr.position.copy(mesh.position);
                 }
                 idMap[d.id] = {mesh: mesh, data: d};
@@ -406,27 +431,6 @@
             }
         }
 
-        const factorParticles = [];
-        function buildFactorParticles() {
-             // Placeholder to fix reference, actual logic in animate
-        }
-        function buildFactorEmitters() {
-             nodeCache.FACTOR.forEach(mesh => {
-                for(let i=0; i<5; i++) {
-                    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: mesh.userData.data.color, blending: THREE.AdditiveBlending }));
-                    spr.scale.set(4,4,1);
-                    // Add to FactorGroup so they rotate with parent
-                    factorGroup.add(spr);
-                    factorParticles.push({
-                        mesh: spr, parent: mesh,
-                        offset: new THREE.Vector3((Math.random()-0.5)*20, (Math.random()-0.5)*20, (Math.random()-0.5)*20),
-                        speed: 0.05 + Math.random()*0.05,
-                        life: Math.random()
-                    });
-                }
-            });
-        }
-
         function buildOutflow() {
             for(let i=0; i<100; i++) {
                 outParticles.push({
@@ -438,6 +442,23 @@
                 outParticles[i].mesh.scale.set(0,0,1);
                 mainGroup.add(outParticles[i].mesh);
             }
+        }
+
+        const factorParticles = [];
+        function buildFactorEmitters() {
+             nodeCache.FACTOR.forEach(mesh => {
+                for(let i=0; i<5; i++) {
+                    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: mesh.userData.data.color, blending: THREE.AdditiveBlending }));
+                    spr.scale.set(4,4,1);
+                    factorGroup.add(spr);
+                    factorParticles.push({
+                        mesh: spr, parent: mesh,
+                        offset: new THREE.Vector3((Math.random()-0.5)*20, (Math.random()-0.5)*20, (Math.random()-0.5)*20),
+                        speed: 0.05 + Math.random()*0.05,
+                        life: Math.random()
+                    });
+                }
+            });
         }
 
         function spawnMeteor() {
@@ -455,7 +476,7 @@
             meteor.mesh.add(meteor.head);
             
             const tailGeo = new THREE.Geometry();
-            for(let i=0; i<30; i++) tailGeo.vertices.push(new THREE.Vector3(0,0,0));
+            for(let i=0; i<20; i++) tailGeo.vertices.push(new THREE.Vector3(0,0,0));
             const tailMat = new THREE.PointsMaterial({ color: 0xffffff, size: 4, map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
             meteor.tailSys = new THREE.Points(tailGeo, tailMat);
             meteor.mesh.add(meteor.tailSys);
@@ -486,11 +507,8 @@
             const t = time % cycle;
             updatePhase(t);
 
-            // 0. Factor Merry-Go-Round
             factorGroup.rotation.x = time * 0.5; 
-            // Update Cables & Particles
             nodeCache.FACTOR.forEach(mesh => {
-                // Cable
                 const cable = mesh.userData.cable;
                 if(cable) {
                     cable.geometry.vertices[1].copy(mesh.position);
@@ -504,8 +522,6 @@
                 p.mesh.material.opacity = p.life;
             });
 
-
-            // 1. Sense Flow
             senseParticles.forEach(p => {
                 const dist = p.mesh.position.distanceTo(p.target);
                 if(dist < 10) {
@@ -516,24 +532,21 @@
                 }
             });
 
-            // 2. Meteors
             if(Math.random() > 0.9) spawnMeteor();
             for(let i=meteors.length-1; i>=0; i--) {
                 const m = meteors[i];
                 m.x += m.speed;
                 m.mesh.position.x = m.x;
 
-                // Tail
                 m.tailSys.material.color.copy(m.color);
                 m.head.material.color.copy(m.color);
                 m.tail.forEach((tp, idx) => {
-                    const r = 8 + idx;
-                    const ang = time*15 + tp.angle;
+                    const r = 6 + idx;
+                    const ang = time*20 + tp.angle;
                     m.tailSys.geometry.vertices[idx].set(-idx*6, Math.cos(ang)*r, Math.sin(ang)*r);
                 });
                 m.tailSys.geometry.verticesNeedUpdate = true;
 
-                // Stages
                 if(m.state === 3 && m.x > 130) {
                     m.state = 4;
                     const c1 = new THREE.Color(0x00ffff);
@@ -559,7 +572,6 @@
                 }
             }
 
-            // 3. Memories
             const mPos = memoryGeo.attributes.position.array;
             const mCol = memoryGeo.attributes.color.array;
             for(let i=0; i<300; i++) { mPos[i*3]=0; mPos[i*3+1]=0; mPos[i*3+2]=0; }
@@ -574,7 +586,18 @@
             memoryGeo.attributes.position.needsUpdate = true;
             memoryGeo.attributes.color.needsUpdate = true;
 
-            // Filter Color
+            outParticles.forEach(p => {
+                if(p.life > 0) {
+                    p.life -= 0.02;
+                    p.pos.add(p.vel);
+                    p.mesh.position.copy(p.pos);
+                    p.mesh.scale.setScalar(20 * p.life);
+                    p.mesh.material.opacity = p.life;
+                } else {
+                    p.mesh.scale.set(0,0,0);
+                }
+            });
+
             const fCol1 = new THREE.Color(0x00ffff);
             const fCol2 = new THREE.Color(0xff0055);
             if(cfFilterMesh[0]) {
@@ -621,23 +644,24 @@
 
         window.addEventListener('mousedown', e => {
             if(e.target.closest('#panel') || e.target.closest('#cf-container') || e.target.closest('#phase-indicator')) return;
-            
-            controls.autoRotate = false; 
-            setTimeout(() => controls.autoRotate = true, 4000);
-
+            controls.autoRotate = false; setTimeout(() => controls.autoRotate = true, 4000);
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(interactables);
-            
-            if(hits.length > 0) {
-                showPanel(hits[0].object.userData.data, hits[0].object.userData.color);
-            } else {
-                closePanel();
-            }
+            if(hits.length > 0) showPanel(hits[0].object.userData.data, hits[0].object.userData.color);
+            else closePanel();
         });
 
-        // Menu Click Handler
+        function setupSlider() {
+            const track = document.getElementById('cf-track');
+            track.addEventListener('mousedown', e => {
+                const rect = track.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                cfRatio = Math.max(0, Math.min(1, x / rect.width));
+            });
+        }
+
         function focusPhase(phase) {
             let target = null;
             if(phase==='SENSE') target = nodeCache.SENSE[0];
@@ -648,17 +672,12 @@
             else if(phase==='OUT') target = nodeCache.OUTPUT[0];
 
             if(target) {
-                // Camera Fly
-                const tPos = target.position.clone();
-                // For Factor inside rotating group, we need world pos
-                if(phase==='FACTOR') {
-                    const worldPos = new THREE.Vector3();
-                    target.getWorldPosition(worldPos);
-                    tPos.copy(worldPos);
-                }
-
+                const tPos = new THREE.Vector3();
+                // Get world position for nested objects
+                target.getWorldPosition(tPos);
+                
                 new TWEEN.Tween(camera.position)
-                    .to({ x: tPos.x, y: tPos.y+50, z: tPos.z+200 }, 1500)
+                    .to({ x: tPos.x, y: tPos.y+100, z: tPos.z+300 }, 1500)
                     .easing(TWEEN.Easing.Cubic.Out)
                     .start();
                 controls.target.copy(tPos);
@@ -667,15 +686,6 @@
             }
         }
         window.focusPhase = focusPhase;
-
-        function setupSlider() {
-            const track = document.getElementById('cf-track');
-            track.addEventListener('mousedown', e => {
-                const rect = track.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                cfRatio = Math.max(0, Math.min(1, x / rect.width));
-            });
-        }
 
         function showPanel(d, col) {
             let hex = '#ffffff';
@@ -705,7 +715,6 @@
         });
 
         window.onload = init;
-
     </script>
 </body>
 </html>
