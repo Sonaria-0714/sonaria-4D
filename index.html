@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>SONALIA: COSMIC LIFE CYCLE (FINAL)</title>
+    <title>SONALIA: COSMIC STABILITY</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; cursor: grab; }
@@ -77,7 +77,7 @@
 
     <div id="loader" onclick="startApp()">
         <div class="load-text">SONALIA</div>
-        <div class="load-sub">LOADING COSMIC CYCLE...</div>
+        <div class="load-sub">LOADING STABLE CORE...</div>
     </div>
 
     <div id="ui-layer">
@@ -118,8 +118,27 @@
             return false;
         };
 
+        // --- Global Variables Declaration (Fix for ReferenceError) ---
+        let scene, camera, renderer, controls, mainGroup, glowTex;
+        let cfRatio = 0.5;
+        const interactables = [];
+        const clock = new THREE.Clock();
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        // Particles Global Arrays
+        const meteors = [];
+        const senseParticles = [];
+        const outParticles = [];
+        // Important: Initialize memoryParticles as global array first
+        const memoryParticles = []; 
+        
+        let memoryGeo, memoryMat;
+        const cfFilterMesh = [];
+        const nodeCache = { SENSE:[], INPUT:[], OS:[], DB:[], FACTOR:[], OUTPUT:[] };
+
         const NODES = [
-            // 0. 5 SENSES (Icons)
+            // 0. 5 SENSES
             { id:"EYE", type:"五感", name:"視覚 (Vision)", color:0xAAFFFF, x:-220, y:60, z:-180, size:8, icon:"EYE", desc:"光情報の受信。", role:"Sensor", thought:"(Seeing)" },
             { id:"EAR", type:"五感", name:"聴覚 (Audio)", color:0xAAFFFF, x:-220, y:30, z:-180, size:8, icon:"EAR", desc:"音情報の受信。", role:"Sensor", thought:"(Hearing)" },
             { id:"NOSE", type:"五感", name:"嗅覚 (Smell)", color:0xAAFFFF, x:-220, y:0, z:-180, size:8, icon:"NOSE", desc:"化学情報の受信。", role:"Sensor", thought:"(Smelling)" },
@@ -151,15 +170,6 @@
             { id:"OUT", type:"OUTPUT", name:"行動", color:0xFFFFFF, x:0, y:0, z:160, size:12, desc:"出力。", role:"Out", thought:"..." }
         ];
 
-        let scene, camera, renderer, controls, mainGroup, glowTex;
-        let cfRatio = 0.5;
-        const interactables = [], meteors = [], outParticles = [], senseParticles = [];
-        const clock = new THREE.Clock(), raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
-        const nodeCache = { SENSE:[], INPUT:[], OS:[], DB:[], FACTOR:[], OUTPUT:[] };
-        
-        // 変数追加: フィルター用メッシュ配列
-        const cfFilterMesh = [];
-
         function init() {
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x000000, 0.0008);
@@ -181,9 +191,9 @@
             glowTex = createGlowTex();
             buildPipelineStructure();
             buildFilterGate();
-            buildCosmicInflow(); // Space Meteors
-            buildOutflow(); // Output Scatter
-            buildMemoryPool(); // Memory particles
+            buildCosmicInflow(); 
+            buildOutflow(); 
+            buildMemoryPool(); 
 
             animate();
             setupSlider();
@@ -305,8 +315,9 @@
 
         function buildMemoryPool() {
             const pGeo = new THREE.BufferGeometry();
-            const pos = new Float32Array(300 * 3);
-            const col = new Float32Array(300 * 3);
+            const count = 300;
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
             pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
             pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
             
@@ -333,13 +344,11 @@
         function spawnMemory(origin) {
             if (!nodeCache.DB || nodeCache.DB.length === 0) return;
             const targetMesh = nodeCache.DB[Math.floor(Math.random()*nodeCache.DB.length)];
-            const target = targetMesh.position;
-            const color = targetMesh.material.color;
             
             memoryParticles.push({
                 pos: origin.clone(),
-                target: target.clone(),
-                color: color.clone(),
+                target: targetMesh.position.clone(),
+                color: targetMesh.material.color.clone(),
                 life: 1.0
             });
         }
@@ -467,10 +476,13 @@
         }
 
         function showPanel(d, col) {
+            let hex = '#ffffff';
+            if(d.color) hex = '#' + new THREE.Color(d.color).getHexString();
+            
             document.getElementById('p-tag').innerText = d.type;
-            document.getElementById('p-tag').style.background = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-tag').style.background = hex;
             document.getElementById('p-title').innerText = d.name;
-            document.getElementById('p-title').style.color = '#'+new THREE.Color(d.color).getHexString();
+            document.getElementById('p-title').style.color = hex;
             document.getElementById('p-desc').innerText = d.desc;
             document.getElementById('p-role').innerText = d.role;
             document.getElementById('p-thought').innerText = d.thought;
